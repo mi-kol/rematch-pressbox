@@ -1,93 +1,102 @@
-##core entities
-
-players
-
-id uuid pk
-handle text unique (rematch name)
-discord_user_id text nullable
-first_seen timestamptz
-last_seen timestamptz
-is_friend boolean default false
-
-clubs
-
-id uuid pk
-name text unique
-slug text unique
-colors jsonb (optional)
-lore jsonb (optional)
-
-player_club_membership
-
-player_id uuid fk
-club_id uuid fk
-start_date date
-end_date date nullable
-
-##sessions + matches
-
-sessions
-
-id uuid pk
-started_at timestamptz
-ended_at timestamptz
-video_path text (local path)
-status text (new|processed|needs_review)
-notes text
-
-matches
-
-id uuid pk
-session_id uuid fk
-ended_at timestamptz
-our_score int
-opp_score int
-opponent_club_id uuid fk nullable
-raw_ocr text
-scoreboard_image_url text (r2 url)
-
-match_participants
-
-match_id uuid fk
-player_id uuid fk
-side text (us|them)
-stats jsonb (goals/assists if you ever extract them)
-
-##press conference
-
-press_conferences
-
-id uuid pk
-session_id uuid fk
-discord_channel_id text
-started_at timestamptz
-ended_at timestamptz
-
-press_questions
-
-id uuid pk
-tag text (e.g. comeback, tilt, defense)
-template text (can include placeholders like {scoreline})
-
-press_answers
-
-id uuid pk
-press_conference_id uuid fk
-press_question_id uuid fk
-player_id uuid fk
-answer text
-created_at timestamptz
-
-publishing
-
-articles
-
-id uuid pk
-type text (recap|league_news|profile)
-title text
-slug text unique
-content_md text
-published_at timestamptz nullable
-session_id uuid fk nullable
-status text (draft|published|failed)
-url text nullable
+| table_name         | column_name                | data_type                | is_nullable |
+| ------------------ | -------------------------- | ------------------------ | ----------- |
+| articles           | id                         | uuid                     | NO          |
+| articles           | league_id                  | uuid                     | NO          |
+| articles           | season_id                  | uuid                     | YES         |
+| articles           | session_id                 | uuid                     | YES         |
+| articles           | journalist_id              | uuid                     | NO          |
+| articles           | type                       | text                     | NO          |
+| articles           | title                      | text                     | NO          |
+| articles           | slug                       | text                     | NO          |
+| articles           | status                     | text                     | NO          |
+| articles           | content_md                 | text                     | NO          |
+| articles           | url                        | text                     | YES         |
+| articles           | published_at               | timestamp with time zone | YES         |
+| articles           | meta                       | jsonb                    | NO          |
+| articles           | created_at                 | timestamp with time zone | NO          |
+| articles           | updated_at                 | timestamp with time zone | NO          |
+| articles           | author                     | text                     | YES         |
+| articles           | tags                       | ARRAY                    | YES         |
+| articles           | press_conference_id        | uuid                     | YES         |
+| articles           | dossier_id                 | uuid                     | YES         |
+| journalists        | id                         | uuid                     | NO          |
+| journalists        | league_id                  | uuid                     | NO          |
+| journalists        | name                       | text                     | NO          |
+| journalists        | slug                       | text                     | NO          |
+| journalists        | persona                    | jsonb                    | NO          |
+| journalists        | active                     | boolean                  | NO          |
+| journalists        | created_at                 | timestamp with time zone | NO          |
+| journalists        | updated_at                 | timestamp with time zone | NO          |
+| leagues            | id                         | uuid                     | NO          |
+| leagues            | name                       | text                     | NO          |
+| leagues            | created_at                 | timestamp with time zone | NO          |
+| match_player_stats | id                         | uuid                     | NO          |
+| match_player_stats | match_id                   | uuid                     | NO          |
+| match_player_stats | player_discord_user_id     | text                     | NO          |
+| match_player_stats | goals                      | integer                  | YES         |
+| match_player_stats | assists                    | integer                  | YES         |
+| match_player_stats | passes                     | integer                  | YES         |
+| match_player_stats | interceptions              | integer                  | YES         |
+| match_player_stats | coverage                   | numeric                  | NO          |
+| match_player_stats | source                     | text                     | NO          |
+| match_player_stats | confidence                 | text                     | NO          |
+| match_player_stats | notes                      | text                     | YES         |
+| match_player_stats | created_at                 | timestamp with time zone | NO          |
+| match_player_stats | updated_at                 | timestamp with time zone | NO          |
+| matches            | id                         | uuid                     | NO          |
+| matches            | league_id                  | uuid                     | NO          |
+| matches            | session_id                 | uuid                     | NO          |
+| matches            | video_id                   | uuid                     | YES         |
+| matches            | match_index                | integer                  | YES         |
+| matches            | our_goals                  | integer                  | YES         |
+| matches            | opp_goals                  | integer                  | YES         |
+| matches            | score_confidence           | text                     | NO          |
+| matches            | score_coverage             | numeric                  | NO          |
+| matches            | notes                      | text                     | YES         |
+| matches            | created_at                 | timestamp with time zone | NO          |
+| matches            | updated_at                 | timestamp with time zone | NO          |
+| moments            | id                         | uuid                     | NO          |
+| moments            | league_id                  | uuid                     | NO          |
+| moments            | session_id                 | uuid                     | NO          |
+| moments            | match_id                   | uuid                     | YES         |
+| moments            | video_id                   | uuid                     | YES         |
+| moments            | created_by_discord_user_id | text                     | YES         |
+| moments            | source                     | text                     | NO          |
+| moments            | confidence                 | text                     | NO          |
+| moments            | t_s                        | numeric                  | YES         |
+| moments            | window_pre_s               | integer                  | NO          |
+| moments            | window_post_s              | integer                  | NO          |
+| moments            | text                       | text                     | NO          |
+| moments            | tags                       | ARRAY                    | NO          |
+| moments            | created_at                 | timestamp with time zone | NO          |
+| players            | id                         | uuid                     | NO          |
+| players            | league_id                  | uuid                     | NO          |
+| players            | discord_user_id            | text                     | NO          |
+| players            | display_name               | text                     | NO          |
+| players            | nicknames                  | ARRAY                    | NO          |
+| players            | created_at                 | timestamp with time zone | NO          |
+| players            | updated_at                 | timestamp with time zone | NO          |
+| press_answers      | id                         | uuid                     | NO          |
+| press_answers      | press_conference_id        | uuid                     | NO          |
+| press_answers      | press_question_id          | uuid                     | NO          |
+| press_answers      | discord_user_id            | text                     | NO          |
+| press_answers      | answer                     | text                     | NO          |
+| press_answers      | created_at                 | timestamp with time zone | NO          |
+| press_conferences  | id                         | uuid                     | NO          |
+| press_conferences  | session_id                 | uuid                     | NO          |
+| press_conferences  | journalist_id              | uuid                     | NO          |
+| press_conferences  | discord_channel_id         | text                     | YES         |
+| press_conferences  | started_at                 | timestamp with time zone | NO          |
+| press_conferences  | ended_at                   | timestamp with time zone | YES         |
+| press_conferences  | created_at                 | timestamp with time zone | NO          |
+| press_conferences  | updated_at                 | timestamp with time zone | NO          |
+| press_questions    | id                         | uuid                     | NO          |
+| press_questions    | league_id                  | uuid                     | NO          |
+| press_questions    | tag                        | text                     | NO          |
+| press_questions    | template                   | text                     | NO          |
+| press_questions    | weight                     | integer                  | NO          |
+| press_questions    | active                     | boolean                  | NO          |
+| press_questions    | min_version                | text                     | YES         |
+| press_questions    | created_at                 | timestamp with time zone | NO          |
+| press_questions    | updated_at                 | timestamp with time zone | NO          |
+| quotes             | id                         | uuid                     | NO          |
