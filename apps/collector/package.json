@@ -1,0 +1,10 @@
+{
+  "name": "@pressbox/collector",
+  "version": "0.1.0",
+  "description": "Filesystem watcher for Medal recordings",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js"
+  }
+}
