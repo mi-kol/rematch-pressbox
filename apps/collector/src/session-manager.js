@@ -96,7 +96,7 @@ export class SessionManager {
       .from("sessions")
       .insert({
         league_id: this.leagueId,
-        status: "active",
+        status: "new",
         source: "collector",
         started_at: startedAt.toISOString(),
       })
