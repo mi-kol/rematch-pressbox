@@ -66,8 +66,10 @@ export async function extractEndFrames(videoPath, options = {}) {
 
     // Preprocessing for better OCR:
     // 1. Crop to HUD region
-    // 2. Scale up 2x for better character recognition
-    vf = `crop=${cropW}:${cropH}:0:${cropY},scale=iw*2:ih*2,${vf}`;
+    // 2. Scale up 3x for better character recognition
+    // 3. Negate (invert) colors - HUD is light text on dark background
+    // 4. Increase contrast and convert to grayscale
+    vf = `crop=${cropW}:${cropH}:0:${cropY},scale=iw*3:ih*3,negate,eq=contrast=1.5,format=gray,${vf}`;
     console.log(`[extract-frames] cropping to HUD region: ${cropW}x${cropH} at (0,${cropY}) with preprocessing`);
   }
 
