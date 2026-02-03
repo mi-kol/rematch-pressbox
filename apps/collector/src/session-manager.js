@@ -14,6 +14,23 @@ export class SessionManager {
     this.leagueId = leagueId;
     this.gapMs = gapMinutes * 60 * 1000;
     this.activeSession = null; // In-memory cache for performance
+    this.matchIndexCache = new Map(); // session_id -> next index (prevents race conditions)
+    this.processingLock = Promise.resolve(); // Serializes video processing
+  }
+
+  /**
+   * Acquire a lock to serialize operations.
+   * Returns a release function to call when done.
+   */
+  async acquireLock() {
+    let release;
+    const newLock = new Promise((resolve) => {
+      release = resolve;
+    });
+    const oldLock = this.processingLock;
+    this.processingLock = newLock;
+    await oldLock;
+    return release;
   }
 
   /**
@@ -111,8 +128,18 @@ export class SessionManager {
 
   /**
    * Get the next match index for a session.
+   * Uses an in-memory cache to prevent race conditions when multiple
+   * videos are processed concurrently.
    */
   async getNextMatchIndex(sessionId) {
+    // Check cache first
+    if (this.matchIndexCache.has(sessionId)) {
+      const nextIndex = this.matchIndexCache.get(sessionId);
+      this.matchIndexCache.set(sessionId, nextIndex + 1);
+      return nextIndex;
+    }
+
+    // Query DB to initialize cache
     const { count, error } = await this.sb
       .from("matches")
       .select("*", { count: "exact", head: true })
@@ -123,6 +150,20 @@ export class SessionManager {
       return 1;
     }
 
-    return (count || 0) + 1;
+    const nextIndex = (count || 0) + 1;
+    this.matchIndexCache.set(sessionId, nextIndex + 1);
+    return nextIndex;
+  }
+
+  /**
+   * Clear the match index cache for a session.
+   * Call this if you need to re-sync with the database.
+   */
+  clearMatchIndexCache(sessionId) {
+    if (sessionId) {
+      this.matchIndexCache.delete(sessionId);
+    } else {
+      this.matchIndexCache.clear();
+    }
   }
 }
