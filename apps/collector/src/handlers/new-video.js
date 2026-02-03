@@ -1,5 +1,6 @@
 import fs from "fs/promises";
 import path from "path";
+import { extractScoreFromVideo } from "../../../../packages/ocr/src/index.js";
 
 /**
  * Handle a new video file detected by the watcher.
@@ -81,6 +82,37 @@ export async function handleNewVideo(filePath, ctx) {
     console.log(
       `[new-video] created match ${matchIndex} in session ${session.id} for ${fileName}`
     );
+
+    // 7. Run OCR to extract score
+    console.log(`[new-video] running OCR on ${fileName}...`);
+    try {
+      const scoreResult = await extractScoreFromVideo(filePath, {
+        secondsFromEnd: 30,
+        fps: 2,
+      });
+
+      const { error: scoreError } = await sb
+        .from("matches")
+        .update({
+          our_goals: scoreResult.our_goals,
+          opp_goals: scoreResult.opp_goals,
+          score_confidence: scoreResult.confidence,
+        })
+        .eq("id", match.id);
+
+      if (scoreError) {
+        console.error(`[new-video] failed to update score: ${scoreError.message}`);
+      } else if (scoreResult.our_goals !== null) {
+        console.log(
+          `[new-video] score: ${scoreResult.our_goals}-${scoreResult.opp_goals} (${scoreResult.confidence})`
+        );
+      } else {
+        console.log(`[new-video] OCR could not determine score`);
+      }
+    } catch (ocrErr) {
+      console.error(`[new-video] OCR failed: ${ocrErr.message}`);
+      // Non-fatal - match record still exists, score can be added manually
+    }
   } catch (err) {
     console.error(`[new-video] failed to process ${filePath}:`, err.message);
     // Don't re-throw - we want the watcher to continue
