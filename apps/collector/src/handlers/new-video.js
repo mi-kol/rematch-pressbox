@@ -1,5 +1,7 @@
 import fs from "fs/promises";
 import path from "path";
+import { extractScoreFromVideo } from "../../../../packages/ocr/src/index.js";
+import { analyzeVideo } from "../../../../packages/analyzer/src/index.js";
 
 /**
  * Handle a new video file detected by the watcher.
@@ -81,6 +83,55 @@ export async function handleNewVideo(filePath, ctx) {
     console.log(
       `[new-video] created match ${matchIndex} in session ${session.id} for ${fileName}`
     );
+
+    // 7. Run OCR to extract score
+    console.log(`[new-video] running OCR on ${fileName}...`);
+    try {
+      const scoreResult = await extractScoreFromVideo(filePath, {
+        secondsFromEnd: 30,
+        fps: 2,
+      });
+
+      const { error: scoreError } = await sb
+        .from("matches")
+        .update({
+          our_goals: scoreResult.our_goals,
+          opp_goals: scoreResult.opp_goals,
+          score_confidence: scoreResult.confidence,
+        })
+        .eq("id", match.id);
+
+      if (scoreError) {
+        console.error(`[new-video] failed to update score: ${scoreError.message}`);
+      } else if (scoreResult.our_goals !== null) {
+        console.log(
+          `[new-video] score: ${scoreResult.our_goals}-${scoreResult.opp_goals} (${scoreResult.confidence})`
+        );
+      } else {
+        console.log(`[new-video] OCR could not determine score`);
+      }
+    } catch (ocrErr) {
+      console.error(`[new-video] OCR failed: ${ocrErr.message}`);
+      // Non-fatal - match record still exists, score can be added manually
+    }
+
+    // 8. Run deep analysis (Haiku for basic, Sonnet for key moments)
+    console.log(`[new-video] running deep analysis on ${fileName}...`);
+    try {
+      const analysisResult = await analyzeVideo(filePath, {
+        fps: 1, // Cost-optimized: 1 fps
+        chunkSize: 12, // Cost-optimized: 12 frames per chunk
+        matchId: match.id,
+        saveToDb: true,
+      });
+
+      console.log(
+        `[new-video] analysis complete: ${analysisResult.goals?.length || 0} goals detected`
+      );
+    } catch (analysisErr) {
+      console.error(`[new-video] analysis failed: ${analysisErr.message}`);
+      // Non-fatal - match record still exists
+    }
   } catch (err) {
     console.error(`[new-video] failed to process ${filePath}:`, err.message);
     // Don't re-throw - we want the watcher to continue
