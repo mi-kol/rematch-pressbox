@@ -140,3 +140,6 @@ vite.config.ts.timestamp-*
 eng.traineddata
 
 .claude/*
+
+packages/parser/output/*
+*.mp4
